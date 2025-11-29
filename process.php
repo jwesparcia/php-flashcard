@@ -1,64 +1,64 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
+// process.php – debug version for Render
+ob_start();
+ini_set('display_errors', 0);
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-function log_debug($msg) {
-    echo "[".date('Y-m-d H:i:s')."] DEBUG: ".$msg."\n";
-}
+header('Content-Type: application/json; charset=utf-8');
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_FILES['pdf'])) {
-        throw new Exception('No file uploaded');
+    $autoload = __DIR__ . '/vendor/autoload.php';
+    if (!file_exists($autoload)) {
+        throw new RuntimeException('vendor/autoload.php missing – did Composer run?');
+    }
+    require_once $autoload;
+
+    /* ---------- 1. upload debug ---------- */
+    error_log('=== PDF UPLOAD DEBUG ===');
+    error_log('$_FILES = ' . print_r($_FILES, true));
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_FILES['pdf']['tmp_name'])) {
+        throw new RuntimeException('No PDF uploaded');
     }
 
-    $file = $_FILES['pdf'];
-    if ($file['error'] !== UPLOAD_ERR_OK) {
-        throw new Exception('Upload error code: ' . $file['error']);
+    $tmp = $_FILES['pdf']['tmp_name'];
+    if (!is_uploaded_file($tmp)) {
+        throw new RuntimeException('Temp file not an uploaded file');
     }
+    error_log('Temp file: ' . $tmp . ' size=' . filesize($tmp));
 
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    if ($ext !== 'pdf') {
-        throw new Exception('Invalid file type, must be PDF');
-    }
-
+    /* ---------- 2. move to uploads ---------- */
     $uploadDir = __DIR__ . '/uploads/';
-    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
+        throw new RuntimeException('Cannot create uploads/');
+    }
+    $target = $uploadDir . 'upload_' . uniqid() . '.pdf';
+    if (!move_uploaded_file($tmp, $target)) {
+        throw new RuntimeException('move_uploaded_file() failed');
+    }
+    error_log('Saved to: ' . $target);
 
-    $filepath = $uploadDir . 'upload_' . uniqid() . '.pdf';
-    if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-        throw new Exception('Failed to save uploaded file');
+    /* ---------- 3. parse with Smalot ---------- */
+    $parser = new \Smalot\PdfParser\Parser();
+    $pdf    = $parser->parseFile($target);
+    $text   = trim($pdf->getText());
+    error_log('Extracted text length: ' . strlen($text));
+
+    @unlink($target);               // tidy up
+
+    if ($text === '') {
+        throw new RuntimeException('No text found in PDF. If it is a scanned/image PDF, convert it to selectable text first (Print → Save as PDF).');
     }
 
-    log_debug("Uploaded file: $filepath");
-
-    // Extract text using pdftotext
-    $txtFile = $uploadDir . 'tmp_' . uniqid() . '.txt';
-    $cmd = "pdftotext " . escapeshellarg($filepath) . " " . escapeshellarg($txtFile);
-    exec($cmd, $out, $ret);
-
-    if ($ret !== 0 || !file_exists($txtFile)) {
-        throw new Exception("Failed to extract text from PDF");
-    }
-
-    $text = file_get_contents($txtFile);
-    @unlink($txtFile);
-    @unlink($filepath);
-
-    if (empty(trim($text))) {
-        throw new Exception("No text found in PDF. Make sure it contains selectable text.");
-    }
-
-    log_debug("Parsed text length: " . strlen($text));
-
-    echo json_encode([
+    $response = [
         'success' => true,
-        'text' => trim(preg_replace('/\s+/', ' ', $text)),
-        'length' => strlen($text)
-    ], JSON_UNESCAPED_UNICODE);
+        'text'    => $text,
+        'length'  => strlen($text),
+    ];
 
-} catch (Exception $e) {
-    log_debug("Exception: " . $e->getMessage());
-    echo json_encode(['error' => $e->getMessage()]);
+} catch (Throwable $e) {
+    error_log('EXCEPTION: ' . $e->getMessage());
+    $response = ['error' => $e->getMessage()];
 }
-exit;
+
+ob_end_clean();
+echo json_encode($response, JSON_UNESCAPED_UNICODE);
