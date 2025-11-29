@@ -1,34 +1,28 @@
 FROM php:8.2-apache
 
-# 1. system deps + unzip (needed by Composer)
+# System dependencies
 RUN apt-get update && apt-get install -y unzip git && rm -rf /var/lib/apt/lists/*
 
-# 2. install Composer
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# 3. copy only composer files first (Docker layer caching)
+# Set working directory
 WORKDIR /var/www/html
-COPY composer.json composer.lock ./
 
-# 4. install PHP packages
+# Copy composer files and install dependencies
+COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# 5. copy the rest of your project
+# Copy entire project
 COPY . .
 
-# 6. permissions
+# Fix permissions
 RUN chown -R www-data:www-data /var/www/html
 
-# 7. Fix Apache directory rules for /var/www
-RUN sed -i \
-    -e 's#<Directory /var/www/>#<Directory /var/www/>#' \
-    -e 's#AllowOverride None#AllowOverride All#' \
-    -e 's#Require all denied#Require all granted#' \
-    /etc/apache2/apache2.conf
-
-# 8. Enable mod_rewrite
+# Enable mod_rewrite
 RUN a2enmod rewrite
 
-RUN echo "=== APACHE2.CONF CONTENTS START ===" \
- && cat /etc/apache2/apache2.conf \
- && echo "=== END ==="
+# 🚨 Override all Apache directory rules to prevent 403 Forbidden
+COPY apache-custom.conf /etc/apache2/conf-enabled/z-custom.conf
+
+EXPOSE 80
