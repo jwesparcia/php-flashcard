@@ -1,5 +1,10 @@
 <?php
 // process.php – debug version for Render
+// process.php – guaranteed debug
+error_log('========= process.php START =========');   // must appear
+error_log('_FILES = ' . print_r($_FILES,true));
+
+// your existing code follows ...
 ob_start();
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
