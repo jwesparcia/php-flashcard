@@ -3,9 +3,9 @@ header('Content-Type: application/json; charset=utf-8');
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Function to log to stdout (Render logs)
-function log_debug($message) {
-    echo "[" . date('Y-m-d H:i:s') . "] DEBUG: " . $message . "\n";
+// Log to stdout (Render logs)
+function log_debug($msg) {
+    echo "[".date('Y-m-d H:i:s')."] DEBUG: ".$msg."\n";
 }
 
 $response = [];
@@ -28,7 +28,6 @@ try {
         throw new Exception('Invalid file type, must be PDF');
     }
 
-    // Ensure uploads folder exists
     $uploadDir = __DIR__ . '/uploads/';
     if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true)) {
         throw new Exception('Cannot create uploads folder');
@@ -45,17 +44,27 @@ try {
     log_debug("File exists: " . (file_exists($filepath) ? 'yes' : 'no'));
     log_debug("File size: " . filesize($filepath));
 
+    // Rewrite PDF via Ghostscript to ensure parser can read it
+    $fixedPdf = $uploadDir . 'fixed_' . uniqid() . '.pdf';
+    $cmd = "gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dSAFER -sOutputFile=" . escapeshellarg($fixedPdf) . " " . escapeshellarg($filepath);
+    exec($cmd, $out, $ret);
+    if ($ret !== 0) {
+        log_debug("Ghostscript rewrite failed, using original PDF");
+        $fixedPdf = $filepath;
+    }
+
     // Parse PDF
     require_once __DIR__ . '/vendor/autoload.php';
     $parser = new \Smalot\PdfParser\Parser();
-    $pdf = $parser->parseFile($filepath);
+    $pdf = $parser->parseFile($fixedPdf);
     $text = $pdf->getText();
 
     log_debug("Parsed text length: " . strlen($text));
     log_debug("Parsed text (first 500 chars): " . substr($text, 0, 500));
 
-    // Cleanup uploaded file
+    // Cleanup uploaded files
     @unlink($filepath);
+    if ($fixedPdf !== $filepath && file_exists($fixedPdf)) @unlink($fixedPdf);
 
     if (empty(trim($text))) {
         throw new Exception('No text found in PDF. Make sure it contains selectable text.');
