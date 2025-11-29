@@ -6,17 +6,18 @@ RUN apt-get update && apt-get install -y git unzip && rm -rf /var/lib/apt/lists/
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Set working directory
 WORKDIR /app
 
 # Copy composer files and install dependencies
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Copy app files
+# Copy all project files
 COPY . .
 
-# Expose Render port
+# Expose Render runtime port
 EXPOSE $PORT
 
-# Start PHP built-in server
-CMD ["php", "-S", "0.0.0.0:${PORT}", "-t", "."]
+# Use PHP built-in server with router.php handling requests
+CMD ["php", "-S", "0.0.0.0:${PORT}", "-t", ".", "router.php"]
