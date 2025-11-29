@@ -1,33 +1,41 @@
-# Use PHP CLI for built-in server
-FROM php:8.2-cli
+# Base image with Apache + PHP
+FROM php:8.2-apache
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y git unzip && rm -rf /var/lib/apt/lists/*
+# Set working directory
+WORKDIR /var/www/html
+
+# Install system dependencies (fonts, Ghostscript, unzip, git)
+RUN apt-get update && \
+    apt-get install -y \
+    libfontconfig1 \
+    libfreetype6 \
+    libjpeg62-turbo \
+    libpng-dev \
+    ghostscript \
+    unzip \
+    git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
-WORKDIR /app
-
-# Copy composer files first for caching
+# Copy composer files first
 COPY composer.json composer.lock ./
 
-# Install dependencies inside container
+# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Copy all app files
+# Copy app files
 COPY . .
 
-# Create uploads folder with correct permissions
-RUN mkdir -p /app/uploads && chmod 777 /app/uploads
+# Fix permissions
+RUN chown -R www-data:www-data /var/www/html
 
-# Ensure PHP can read files
-RUN find /app -type d -exec chmod 755 {} \; \
-    && find /app -type f -exec chmod 644 {} \;
+# Expose port
+EXPOSE 80
 
-# Expose Render port
-EXPOSE $PORT
-
-# Start PHP built-in server
-CMD php -S 0.0.0.0:$PORT -t . router.php
+# Start Apache in foreground
+CMD ["apache2-foreground"]
