@@ -3,12 +3,9 @@ header('Content-Type: application/json; charset=utf-8');
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Debug log file
-$debugLog = __DIR__ . '/debug.log';
-
+// Function to log to stdout (Render logs)
 function log_debug($message) {
-    global $debugLog;
-    file_put_contents($debugLog, date('Y-m-d H:i:s') . " - " . $message . "\n", FILE_APPEND);
+    echo "[" . date('Y-m-d H:i:s') . "] DEBUG: " . $message . "\n";
 }
 
 $response = [];
