@@ -1,4 +1,4 @@
-# Base image: PHP CLI for built-in server
+# Use PHP CLI for built-in server
 FROM php:8.2-cli
 
 # Install system dependencies
@@ -10,10 +10,10 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /app
 
-# Copy only composer files first for caching
+# Copy only composer files first (for caching)
 COPY composer.json composer.lock ./
 
-# Install dependencies inside Docker (creates vendor/ inside container)
+# Install dependencies inside the container (creates vendor/)
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 # Copy all your app files
@@ -27,4 +27,5 @@ RUN find /app -type d -exec chmod 755 {} \; \
 EXPOSE $PORT
 
 # Use PHP built-in server with router.php for fallback routing
-CMD ["php", "-S", "0.0.0.0:${PORT}", "-t", ".", "router.php"]
+# Shell form allows $PORT to expand at runtime
+CMD php -S 0.0.0.0:$PORT -t . router.php
