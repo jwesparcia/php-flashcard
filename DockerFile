@@ -1,11 +1,26 @@
-# Use official PHP image with Apache
+# Use official PHP with Apache
 FROM php:8.2-apache
 
-# Copy all project files to the container
-COPY . /var/www/html/
+# Install system dependencies and Composer
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Set working directory
-WORKDIR /var/www/html/
+WORKDIR /var/www/html
 
-# Expose port 80 (standard HTTP)
-EXPOSE 80
+# Copy composer files first (for better caching)
+COPY composer.json composer.lock ./
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --no-scripts
+
+# Copy the rest of your project
+COPY . .
+
+# Set permissions (important for Render)
+RUN chown -R www-data:www-data /var/www/html

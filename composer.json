@@ -9,6 +9,7 @@
         "thiagoalessio/tesseract_ocr": "^2.13",
         "setasign/fpdi": "^2.6",
         "setasign/fpdf": "^1.8",
-        "mikehaertl/php-pdftk": "^0.14.2"
+        "mikehaertl/php-pdftk": "^0.14.2",
+        "smalot/pdfparser": "^2.12"
     }
 }
