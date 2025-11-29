@@ -1,7 +1,8 @@
 FROM php:8.2-cli
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y git unzip && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -9,15 +10,16 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /app
 
-# Copy composer files and install dependencies
-COPY composer.json composer.lock ./
+# Install Composer dependencies
+COPY composer.json composer.lock* ./
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Copy all project files
+# Copy the rest of the application
 COPY . .
 
-# Expose Render runtime port
+# Expose the port Render provides
+ENV PORT=10000
 EXPOSE $PORT
 
-# Use PHP built-in server with router.php handling requests (shell form to expand $PORT)
-CMD /bin/sh -c "php -S 0.0.0.0:${PORT} -t . router.php"
+# THIS LINE IS THE FIX — shell form so $PORT actually expands
+CMD ["/bin/sh", "-c", "php -S 0.0.0.0:$PORT -t . router.php"]
