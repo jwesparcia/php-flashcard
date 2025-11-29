@@ -24,3 +24,6 @@ COPY . .
 
 # Set permissions (important for Render)
 RUN chown -R www-data:www-data /var/www/html
+
+RUN echo '<Directory /var/www/html>\n\tRequire all granted\n</Directory>' \
+    >> /etc/apache2/apache2.conf
