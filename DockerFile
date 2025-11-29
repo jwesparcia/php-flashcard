@@ -23,12 +23,9 @@ RUN chown -R www-data:www-data /var/www/html
 # Enable mod_rewrite
 RUN a2enmod rewrite
 
-# Copy Apache override config (optional, safe default)
-COPY apache-custom.conf /etc/apache2/conf-enabled/z-custom.conf
-
-# Copy startup script that sets the correct Render port
+# Copy startup script
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
-# Use the startup script as CMD
+# Start Apache using startup script
 CMD ["/start.sh"]

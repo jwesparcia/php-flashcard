@@ -1,7 +1,5 @@
-# allow everybody to reach every file in this directory
 Require all granted
 
-# if the request is for a real file/dir, serve it; otherwise fall back to index.php
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
