@@ -32,6 +32,7 @@ RUN chown -R www-data:www-data /var/www/html
 
 # Expose port
 EXPOSE 80
-
+# send PHP errors to stdout → Render “Logs” tab
+RUN echo 'error_log = /dev/stderr' >> /usr/local/etc/php/conf.d/docker-php-log.ini
 # Start Apache
 CMD ["apache2-foreground"]
