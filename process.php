@@ -44,31 +44,25 @@ try {
     log_debug("File exists: " . (file_exists($filepath) ? 'yes' : 'no'));
     log_debug("File size: " . filesize($filepath));
 
-    // Rewrite PDF via Ghostscript to ensure parser can read it
-    $fixedPdf = $uploadDir . 'fixed_' . uniqid() . '.pdf';
-    $cmd = "gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dSAFER -sOutputFile=" . escapeshellarg($fixedPdf) . " " . escapeshellarg($filepath);
+    // Use pdftotext to extract text
+    $txtFile = $uploadDir . 'tmp_' . uniqid() . '.txt';
+    $cmd = "pdftotext " . escapeshellarg($filepath) . " " . escapeshellarg($txtFile);
     exec($cmd, $out, $ret);
-    if ($ret !== 0) {
-        log_debug("Ghostscript rewrite failed, using original PDF");
-        $fixedPdf = $filepath;
+
+    if ($ret !== 0 || !file_exists($txtFile)) {
+        throw new Exception("Failed to extract text from PDF using pdftotext");
     }
 
-    // Parse PDF
-    require_once __DIR__ . '/vendor/autoload.php';
-    $parser = new \Smalot\PdfParser\Parser();
-    $pdf = $parser->parseFile($fixedPdf);
-    $text = $pdf->getText();
+    $text = file_get_contents($txtFile);
+    @unlink($txtFile);
+    @unlink($filepath); // remove uploaded PDF after processing
+
+    if (empty(trim($text))) {
+        throw new Exception("No text found in PDF. Make sure it contains selectable text.");
+    }
 
     log_debug("Parsed text length: " . strlen($text));
     log_debug("Parsed text (first 500 chars): " . substr($text, 0, 500));
-
-    // Cleanup uploaded files
-    @unlink($filepath);
-    if ($fixedPdf !== $filepath && file_exists($fixedPdf)) @unlink($fixedPdf);
-
-    if (empty(trim($text))) {
-        throw new Exception('No text found in PDF. Make sure it contains selectable text.');
-    }
 
     $response = [
         'success' => true,
