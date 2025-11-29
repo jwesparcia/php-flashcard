@@ -19,10 +19,12 @@ COPY . .
 # 6. permissions
 RUN chown -R www-data:www-data /var/www/html
 
-# 7. 403 fix: allow access to /
-RUN sed -i '/<Directory \/>/,/<\/Directory>/ s/Require all denied/Require all granted/' \
+# 7. Fix Apache directory rules for /var/www
+RUN sed -i \
+    -e 's#<Directory /var/www/>#<Directory /var/www/>#' \
+    -e 's#AllowOverride None#AllowOverride All#' \
+    -e 's#Require all denied#Require all granted#' \
     /etc/apache2/apache2.conf
 
-# 403 fix #2 – allow /var/www (the one that is actually biting you)
-RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/Require all denied/Require all granted/' \
-    /etc/apache2/apache2.conf
+# 8. Enable mod_rewrite
+RUN a2enmod rewrite
