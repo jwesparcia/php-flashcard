@@ -19,5 +19,5 @@ COPY . .
 # Expose Render runtime port
 EXPOSE $PORT
 
-# Use PHP built-in server with router.php handling requests
-CMD ["php", "-S", "0.0.0.0:${PORT}", "-t", ".", "router.php"]
+# Use PHP built-in server with router.php handling requests (shell form to expand $PORT)
+CMD /bin/sh -c "php -S 0.0.0.0:${PORT} -t . router.php"
