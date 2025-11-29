@@ -1,29 +1,24 @@
-# Use official PHP with Apache
 FROM php:8.2-apache
 
-# Install system dependencies and Composer
-RUN apt-get update && apt-get install -y \
-    git \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
+# 1. system deps + unzip (needed by Composer)
+RUN apt-get update && apt-get install -y unzip git && rm -rf /var/lib/apt/lists/*
 
-# Install Composer
+# 2. install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set working directory
+# 3. copy only composer files first (Docker layer caching)
 WORKDIR /var/www/html
-
-# Copy composer files first (for better caching)
 COPY composer.json composer.lock ./
 
-# Install PHP dependencies
+# 4. install PHP packages
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Copy the rest of your project
+# 5. copy the rest of your project
 COPY . .
 
-# Set permissions (important for Render)
+# 6. permissions
 RUN chown -R www-data:www-data /var/www/html
 
-RUN echo '<Directory /var/www/html>\n\tRequire all granted\n</Directory>' \
-    >> /etc/apache2/apache2.conf
+# 7. 403 fix: allow access to /
+RUN sed -i '/<Directory \/>/,/<\/Directory>/ s/Require all denied/Require all granted/' \
+    /etc/apache2/apache2.conf
