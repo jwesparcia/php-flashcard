@@ -34,5 +34,14 @@ RUN chown -R www-data:www-data /var/www/html
 EXPOSE 80
 # send PHP errors to stdout → Render “Logs” tab
 RUN echo 'error_log = /dev/stderr' >> /usr/local/etc/php/conf.d/docker-php-log.ini
+
+# 1. PHP errors → stdout (appears in Render Logs)
+RUN echo 'error_log = /dev/stderr' >> /usr/local/etc/php/conf.d/docker-php-log.ini
+
+# 2. Apache error log → stdout
+RUN ln -sf /dev/stderr /var/log/apache2/error.log
+
+# 3. Apache access log → stdout (optional, lets you see every hit)
+RUN ln -sf /dev/stdout /var/log/apache2/access.log
 # Start Apache
 CMD ["apache2-foreground"]
