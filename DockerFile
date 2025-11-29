@@ -22,3 +22,7 @@ RUN chown -R www-data:www-data /var/www/html
 # 7. 403 fix: allow access to /
 RUN sed -i '/<Directory \/>/,/<\/Directory>/ s/Require all denied/Require all granted/' \
     /etc/apache2/apache2.conf
+
+# 403 fix #2 – allow /var/www (the one that is actually biting you)
+RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/Require all denied/Require all granted/' \
+    /etc/apache2/apache2.conf
