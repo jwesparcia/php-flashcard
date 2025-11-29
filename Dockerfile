@@ -10,22 +10,24 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /app
 
-# Copy only composer files first (for caching)
+# Copy composer files first for caching
 COPY composer.json composer.lock ./
 
-# Install dependencies inside the container (creates vendor/)
+# Install dependencies inside container
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Copy all your app files
+# Copy all app files
 COPY . .
+
+# Create uploads folder with correct permissions
+RUN mkdir -p /app/uploads && chmod 777 /app/uploads
 
 # Ensure PHP can read files
 RUN find /app -type d -exec chmod 755 {} \; \
     && find /app -type f -exec chmod 644 {} \;
 
-# Expose Render runtime port
+# Expose Render port
 EXPOSE $PORT
 
-# Use PHP built-in server with router.php for fallback routing
-# Shell form allows $PORT to expand at runtime
+# Start PHP built-in server
 CMD php -S 0.0.0.0:$PORT -t . router.php
