@@ -4,14 +4,10 @@ FROM php:8.2-apache
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies (fonts, Ghostscript, unzip, git)
+# Install system dependencies (poppler-utils for pdftotext, unzip, git)
 RUN apt-get update && \
     apt-get install -y \
-    libfontconfig1 \
-    libfreetype6 \
-    libjpeg62-turbo \
-    libpng-dev \
-    ghostscript \
+    poppler-utils \
     unzip \
     git && \
     rm -rf /var/lib/apt/lists/*
@@ -28,13 +24,13 @@ COPY composer.json composer.lock ./
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Copy app files
+# Copy application files
 COPY . .
 
 # Fix permissions
 RUN chown -R www-data:www-data /var/www/html
 
-# Expose port
+# Expose port 80
 EXPOSE 80
 
 # Start Apache in foreground
