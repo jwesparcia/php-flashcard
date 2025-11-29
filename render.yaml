@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: php-flashcard
-    env: php
-    region: oregon
-    plan: free
-    buildCommand: composer install --no-dev --optimize-autoloader
-    startCommand: heroku-php-apache2 .
