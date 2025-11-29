@@ -3,9 +3,20 @@ header('Content-Type: application/json; charset=utf-8');
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Debug log file
+$debugLog = __DIR__ . '/debug.log';
+
+function log_debug($message) {
+    global $debugLog;
+    file_put_contents($debugLog, date('Y-m-d H:i:s') . " - " . $message . "\n", FILE_APPEND);
+}
+
 $response = [];
 
 try {
+    log_debug("Request method: " . $_SERVER['REQUEST_METHOD']);
+    log_debug("FILES array: " . print_r($_FILES, true));
+
     if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_FILES['pdf'])) {
         throw new Exception('No file uploaded');
     }
@@ -20,7 +31,7 @@ try {
         throw new Exception('Invalid file type, must be PDF');
     }
 
-    // Ensure uploads folder exists and is writable
+    // Ensure uploads folder exists
     $uploadDir = __DIR__ . '/uploads/';
     if (!is_dir($uploadDir) && !mkdir($uploadDir, 0777, true)) {
         throw new Exception('Cannot create uploads folder');
@@ -33,19 +44,18 @@ try {
         throw new Exception('Failed to move uploaded file');
     }
 
-    // Debug: check file
-    if (!file_exists($filepath)) {
-        throw new Exception('File not found after upload');
-    }
-    if (filesize($filepath) === 0) {
-        throw new Exception('Uploaded file is empty');
-    }
+    log_debug("Uploaded file saved: $filepath");
+    log_debug("File exists: " . (file_exists($filepath) ? 'yes' : 'no'));
+    log_debug("File size: " . filesize($filepath));
 
     // Parse PDF
     require_once __DIR__ . '/vendor/autoload.php';
     $parser = new \Smalot\PdfParser\Parser();
     $pdf = $parser->parseFile($filepath);
     $text = $pdf->getText();
+
+    log_debug("Parsed text length: " . strlen($text));
+    log_debug("Parsed text (first 500 chars): " . substr($text, 0, 500));
 
     // Cleanup uploaded file
     @unlink($filepath);
@@ -61,6 +71,7 @@ try {
     ];
 
 } catch (Exception $e) {
+    log_debug("Exception: " . $e->getMessage());
     $response = ['error' => $e->getMessage()];
 }
 
