@@ -29,4 +29,6 @@ RUN sed -i \
 # 8. Enable mod_rewrite
 RUN a2enmod rewrite
 
-RUN cat /etc/apache2/apache2.conf
+RUN echo "=== APACHE2.CONF CONTENTS START ===" \
+ && cat /etc/apache2/apache2.conf \
+ && echo "=== END ==="
